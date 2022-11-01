@@ -37,17 +37,21 @@ def ct_url_check(entry):
         return False
 
 
-def request_parser(entry):
-    url_protocol = re.search('^https|^http', entry['request']['url']).group(0)
-    url_method = entry['request']['method']
-    url_host = entry['request']['url'].split('/')[2]
+def request_parser(request):
+    request_protocol = re.search('^https|^http', request['url']).group(0)
+    request_method = request['method']
+    request_host = request['url'].split('/')[2]
     try:
-        url_path = '/' + '/'.join(entry['request']['url'].split('/')[3:]).split('?')[0]
-        url_params = entry['request']['url'].split('?')[1].split('&')
+        request_path = '/' + '/'.join(request['url'].split('/')[3:]).split('?')[0]
+        request_params = request['url'].split('?')[1].split('&')
     except IndexError:
-        url_path = '/' + '/'.join(entry['request']['url'].split('/')[3:])
-        url_params = []
-    return url_protocol, url_method, url_host, url_path, url_params
+        request_path = '/' + '/'.join(request['url'].split('/')[3:])
+        request_params = []
+    try:
+        request_body = request['postData']['text']
+    except KeyError:
+        request_body = None
+    return request_protocol, request_method, request_host, request_path, request_params, request_body
 
 
 def main(args):
@@ -61,7 +65,7 @@ def main(args):
                 continue
             if ct_header_check(entry):
                 continue
-        print(request_parser(entry))
+        print(request_parser(entry['request']))
     print(jmx_name)
 
 
