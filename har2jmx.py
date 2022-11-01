@@ -1,6 +1,8 @@
+import re
 from argparse import ArgumentParser
 import json
 import configparser
+from datetime import datetime
 
 config = configparser.ConfigParser()
 config.read('filters.conf')
@@ -35,20 +37,50 @@ def ct_url_check(entry):
         return False
 
 
-def write_jmx(filter_option):
+def request_parser(entry):
+    url_protocol = re.search('^https|^http', entry['request']['url']).group(0)
+    url_method = entry['request']['method']
+    url_host = entry['request']['url'].split('/')[2]
+    try:
+        url_path = '/' + '/'.join(entry['request']['url'].split('/')[3:]).split('?')[0]
+        url_params = entry['request']['url'].split('?')[1].split('&')
+    except IndexError:
+        url_path = '/' + '/'.join(entry['request']['url'].split('/')[3:])
+        url_params = []
+    return url_protocol, url_method, url_host, url_path, url_params
+
+
+def main(args):
     har = read_har(args.har_file)
+    har_name = args.har_file.replace('\\', '/').split('/')[-1].split('.')[0]
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+    jmx_name = f'{har_name}_{timestamp}.jmx'
     for entry in har['log']['entries']:
-        if not filter_option:
+        if not args.no_filter:
             if ct_url_check(entry):
                 continue
             if ct_header_check(entry):
                 continue
-        print(entry['request']['url'])
+        print(request_parser(entry))
+    print(jmx_name)
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('har_file', help='Path to .har file')
-    parser.add_argument('-nf', '--no-filter', action='store_true', help='Disables filtering out static requests. Filter settings - filters.conf')
-    args = parser.parse_args()
-    write_jmx(args.no_filter)
+    parser.add_argument('har_file',
+                        help='Path to .har file')
+    parser.add_argument('-nf', '--no-filter', action='store_true',
+                        help='Disables filtering out static requests. Filter settings - filters.conf')
+    # TODO Add host filter
+    # parser.add_argument('-hf', '--host-filter', action='store_true',
+    #                     help='Enable host filter')
+    # TODO Add header manager option
+    # parser.add_argument('-nh', '--no-headers', action='store_false',
+    #                     help='Don\'t add Header Manager for samplers')
+    # TODO Add custom path and name for .jmx
+    # parser.add_argument('-jp', '--jmx-path',
+    #                     help='Custom path to save .jmx')
+    # parser.add_argument('-jn', '--jmx-name',
+    #                     help='Custom name for .jmx file. Default is same as .har\'s name + timestamp')
+    cl_args = parser.parse_args()
+    main(cl_args)
