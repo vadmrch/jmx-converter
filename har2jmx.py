@@ -17,10 +17,17 @@ def read_har(path):
     return har_dict
 
 
-def make_jmx_name(path):
-    har_name = path.replace('\\', '/').split('/')[-1].split('.')[0]
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
-    jmx_name = f'{har_name}_{timestamp}.jmx'
+def make_jmx_name(path, param):
+    if path is not None:
+        har_name = path.replace('\\', '/').split('/')[-1].split('.')[0]
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+        jmx_name = f'{har_name}_{timestamp}.jmx'
+    else:
+        jmx_name = param
+        if len(jmx_name.split('.')) > 1:
+            jmx_name = jmx_name.split('.')[0] + '.jmx'
+        else:
+            jmx_name = jmx_name + '.jmx'
     return jmx_name
 
 
@@ -124,7 +131,10 @@ def host_filter(host):
 
 def main(args):
     har = read_har(args.har_file)
-    jmx_name = make_jmx_name(args.har_file)
+    if args.jmx_name:
+        jmx_name = make_jmx_name(None, args.jmx_name)
+    else:
+        jmx_name = make_jmx_name(args.har_file, None)
     for entry in har['log']['entries']:
         if not args.no_filter:
             if ct_url_check(entry):
@@ -152,7 +162,7 @@ if __name__ == '__main__':
     # TODO Add custom path and name for .jmx
     # parser.add_argument('-jp', '--jmx-path',
     #                     help='Custom path to save .jmx')
-    # parser.add_argument('-jn', '--jmx-name',
-    #                     help='Custom name for .jmx file. Default is same as .har\'s name + timestamp')
+    parser.add_argument('-jn', '--jmx-name',
+                        help='Custom name for .jmx file. Default is same as .har\'s name + timestamp')
     cl_args = parser.parse_args()
     main(cl_args)
