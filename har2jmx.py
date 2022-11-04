@@ -8,6 +8,7 @@ config = configparser.ConfigParser()
 config.read('filters.conf')
 CT_HEADER_FILTER = config.get('Filter rules', 'content-type_filter')
 CT_URL_FILTER = config.get('Filter rules', 'url-based_filter')
+HOST_FILTER = config.get('Filter rules', 'host_filter')
 
 
 def read_har(path):
@@ -113,6 +114,14 @@ def url_parser(request):
     return parsed_url
 
 
+# TODO Add wildcards support
+def host_filter(host):
+    if host in HOST_FILTER:
+        return True
+    else:
+        return False
+
+
 def main(args):
     har = read_har(args.har_file)
     jmx_name = make_jmx_name(args.har_file)
@@ -121,6 +130,9 @@ def main(args):
             if ct_url_check(entry):
                 continue
             if ct_header_check(entry):
+                continue
+        if args.host_filter:
+            if host_filter(url_parser(entry['request'])['host']):
                 continue
         print(url_parser(entry['request']))
     print(jmx_name)
@@ -132,9 +144,8 @@ if __name__ == '__main__':
                         help='Path to .har file')
     parser.add_argument('-nf', '--no-filter', action='store_true',
                         help='Disables filtering out static requests. Filter settings - filters.conf')
-    # TODO Add host filter
-    # parser.add_argument('-hf', '--host-filter', action='store_true',
-    #                     help='Enable host filter')
+    parser.add_argument('-hf', '--host-filter', action='store_true',
+                        help='Enable host filter')
     # TODO Add header manager option
     # parser.add_argument('-nh', '--no-headers', action='store_false',
     #                     help='Don\'t add Header Manager for samplers')
